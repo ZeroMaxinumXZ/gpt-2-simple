@@ -1,4 +1,6 @@
-# gpt-2-simple
+# gpt-2-simpleain OpenAI's GPT-2 text-generating model on new texts
+
+This is a fork of gpt2_simple that adds an information-maximizing loss function. I am relatively new to github so I don't know if I messed something up. 
 
 ![gen_demo](docs/gen_demo.png)
 
