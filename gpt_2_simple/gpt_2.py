@@ -13,6 +13,7 @@ import time
 from datetime import datetime
 import csv
 import argparse
+import tensorflow.keras.backend as K\
 
 # if in Google Colaboratory
 try:
@@ -24,6 +25,12 @@ from gpt_2_simple.src import model, sample, encoder, memory_saving_gradients
 from gpt_2_simple.src.load_dataset import load_dataset, Sampler
 from gpt_2_simple.src.accumulate import AccumulatingOptimizer
 
+def mutual_info_loss(self, c, c_given_x):
+    """The mutual information metric we aim to minimize"""
+    eps = 1e-8
+    conditional_entropy = K.mean(- K.sum(K.log(c_given_x + eps) * c, axis=1))
+    entropy = K.mean(- K.sum(K.log(c + eps) * c, axis=1))
+    return conditional_entropy + entropy
 
 def download_file_with_progress(url_base, sub_dir, model_name, file_name):
     """General utility for incrementally downloading files from the internet
@@ -168,9 +175,8 @@ def finetune(sess,
 
     context = tf.compat.v1.placeholder(tf.int32, [batch_size, None])
     output = model.model(hparams=hparams, X=context)
-    loss = tf.reduce_mean(
-        input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-            labels=context[:, 1:], logits=output['logits'][:, :-1]))
+    loss = mutual_info_loss(
+            c=context[:, 1:], c_given_x=output['logits'][:, :-1])
 
     tf_sample = sample.sample_sequence(
         hparams=hparams,
