@@ -25,13 +25,6 @@ from gpt_2_simple.src import model, sample, encoder, memory_saving_gradients
 from gpt_2_simple.src.load_dataset import load_dataset, Sampler
 from gpt_2_simple.src.accumulate import AccumulatingOptimizer
 
-def mutual_info_loss(c, c_given_x):
-    """The mutual information metric we aim to minimize"""
-    eps = 1e-8
-    conditional_entropy = K.mean(- K.sum(K.log(c_given_x + eps) * c, axis=1))
-    entropy = K.mean(- K.sum(K.log(c + eps) * c, axis=1))
-    return conditional_entropy + entropy
-
 def download_file_with_progress(url_base, sub_dir, model_name, file_name):
     """General utility for incrementally downloading files from the internet
     with progress bar
@@ -114,6 +107,7 @@ def start_tf_sess(threads=-1, server=None):
 
 def finetune(sess,
              dataset,
+             loss_function,
              steps=-1,
              model_name='117M',
              model_dir='models',
@@ -132,7 +126,8 @@ def finetune(sess,
              max_checkpoints=1,
              use_memory_saving_gradients=False,
              only_train_transformer_layers=False,
-             overwrite=False):
+             overwrite=False, 
+             ):
     """Finetunes the model on the given dataset.
 
     Adapted from https://github.com/nshepperd/gpt-2/blob/finetuning/train.py.
@@ -175,8 +170,7 @@ def finetune(sess,
 
     context = tf.compat.v1.placeholder(tf.int32, [batch_size, None])
     output = model.model(hparams=hparams, X=context)
-    loss = mutual_info_loss(
-            c=context[:, 1:], c_given_x=output['logits'][:, :-1])
+    loss = loss_function(context[:, 1:], output['logits'][:, :-1])
 
     tf_sample = sample.sample_sequence(
         hparams=hparams,
